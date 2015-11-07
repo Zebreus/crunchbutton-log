@@ -11,7 +11,38 @@ var dateFormat = require('dateformat');
 
 var mysql = require('mysql');
 var fs = require('fs');
-var fs = require('fs');
+var cors = require('cors');
+
+
+process.env.DATABASE_URL = 'mysql://root:root@localhost/crunchbutton';
+
+var parseUrl = function() {
+	if (!process.env.DATABASE_URL) {
+		return null;
+	}
+
+	var matches = process.env.DATABASE_URL.match(/^(mysql:\/\/)(.*):(.*)@([a-z0-9_\-\.]+)(:([0-9]+))?\/([a-z0-9\._]+)(\?sslca=(.*))?$/i);
+
+	return {
+		host: matches[4],
+		user: matches[2],
+		password: matches[3],
+		database: matches[7],
+		port: matches[6]
+	};
+};
+
+var db = parseUrl() || {
+	host     : 'localhost',
+	user     : 'root',
+	password : 'root',
+	database : 'crunchbutton',
+	port     : 3306
+};
+
+var corsOptions = {
+	origin: 'https://crunchbutton.com'
+};
 
 
 var options = {
@@ -19,21 +50,23 @@ var options = {
 	cert: fs.readFileSync('wild.sha-2.crunchbutton.com.crt')
 };
 
-var pool = mysql.createPool({
-	host     : 'localhost',
-	user     : 'root',
-	password : 'root',
-	database : 'crunchbutton',
-	port     : 3306
+var pool = mysql.createPool(db);
+
+http.createServer(app).listen(port, function() {
+	console.log('HTTP listening at port %d', port);
 });
 
-http.createServer(app).listen(8080);
-https.createServer(options, app).listen(443);
+/*
+// only for local dev
+https.createServer(options, app).listen(443, function() {
+	console.log('HTTP listening at port %d', 443);
+});
+*/
 
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-app.post('/api/events', function (req, res) {
+app.post('/api/events', cors(corsOptions), function (req, res) {
 
 	var data = {
 		category: req.query.category,
@@ -93,7 +126,7 @@ app.post('/api/events', function (req, res) {
 	res.send('{"status":"success"}');
 });
 
-app.post('/api/log', function (req, res) {
+app.post('/api/log', cors(corsOptions), function (req, res) {
 	var data = {
 		level: 'debug',
 		type: req.query.type,
