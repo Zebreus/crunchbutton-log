@@ -13,9 +13,6 @@ var mysql = require('mysql');
 var fs = require('fs');
 var cors = require('cors');
 
-
-process.env.DATABASE_URL = 'mysql://root:root@localhost/crunchbutton';
-
 var parseUrl = function() {
 	if (!process.env.DATABASE_URL) {
 		return null;
@@ -23,13 +20,18 @@ var parseUrl = function() {
 
 	var matches = process.env.DATABASE_URL.match(/^(mysql:\/\/)(.*):(.*)@([a-z0-9_\-\.]+)(:([0-9]+))?\/([a-z0-9\._]+)(\?sslca=(.*))?$/i);
 
-	return {
+	var db = {
 		host: matches[4],
 		user: matches[2],
 		password: matches[3],
 		database: matches[7],
 		port: matches[6]
 	};
+	if (matches[9] == 'rds') {
+		db.ssl = 'Amazon RDS';
+	}
+
+	return db;
 };
 
 var db = parseUrl() || {
@@ -126,7 +128,7 @@ app.post('/api/events', cors(corsOptions), function (req, res) {
 	res.send('{"status":"success"}');
 });
 
-app.post('/api/log', cors(corsOptions), function (req, res) {
+app.get('/api/log', cors(corsOptions), function (req, res) {
 
 
 	var data = {
