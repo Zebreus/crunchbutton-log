@@ -127,6 +127,8 @@ app.post('/api/events', cors(corsOptions), function (req, res) {
 });
 
 app.post('/api/log', cors(corsOptions), function (req, res) {
+
+
 	var data = {
 		level: 'debug',
 		type: req.query.type,
@@ -134,21 +136,92 @@ app.post('/api/log', cors(corsOptions), function (req, res) {
 		data: JSON.stringify(req.query.data)
 	};
 
-	pool.getConnection(function(err, connection) {
-		if (err) {
-			console.log(err);
-			return;
+	// clean the type name
+	if( data.type ){
+		data.type = data.type.replace(/[^a-z\d _]/g, '');
+		data.type = data.type.replace(/[ _]/g, '-');
+	} else {
+		data.type = 'unkown';
+	}
+
+
+	var start = function( data ){
+
+		// insert log
+		var insertLog = function( data ){
+
+			pool.getConnection(function(err, connection) {
+				if (err) {
+					console.log(err);
+					return;
+				}
+				delete( data.type );
+				var sql = 'insert into log set ?';
+				connection.query( sql, data, function(err, results) {
+					connection.release();
+					if (err) {
+						console.log(err);
+						return;
+					}
+				});
+			});
 		}
 
-		var sql = 'insert into log set ?';
-		connection.query(sql, data, function(err, results) {
-			connection.release();
-			if (err) {
-				console.log(err);
-				return;
-			}
-		});
-	});
+		// if the type doesnt exist, create one
+		var saveType = function( data ){
+			var type = { type: data.type };
+
+			pool.getConnection(function(err, connection) {
+				if (err) {
+					console.log(err);
+					return;
+				}
+
+				var sql = 'insert into log_type set ?';
+				connection.query(sql, type, function(err, results) {
+					connection.release();
+					if (err) {
+						console.log(err);
+						return true;
+					}
+					getType( data );
+				});
+			});
+		};
+
+		var getType = function( data ){
+			pool.getConnection(function(err, connection) {
+				if (err) {
+					console.log(err);
+					return;
+				}
+
+				var sql = 'select * from log_type where type = ?';
+				connection.query(sql, [data.type], function(err, results) {
+					connection.release();
+					if (err) {
+						console.log(err);
+						return;
+					}
+
+					if( results && results[0] && results[0].id_log_type ){
+						data.id_log_type = results[0].id_log_type;
+						insertLog( data );
+					} else {
+						saveType( data );
+					}
+
+				});
+			});
+		}
+
+		// get the type and save it
+		getType( data );
+
+	}
+
+	// start stuff
+	start( data );
 
 	res.send('{"status":"saved"}');
 });
