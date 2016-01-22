@@ -128,7 +128,7 @@ app.post('/api/events', cors(corsOptions), function (req, res) {
 	res.send('{"status":"success"}');
 });
 
-app.get('/api/log', cors(corsOptions), function (req, res) {
+app.post('/api/log', cors(corsOptions), function (req, res) {
 
 
 	var data = {
