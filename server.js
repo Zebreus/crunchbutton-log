@@ -1,6 +1,7 @@
 var express = require('express');
 var app = express();
 
+var crunchbuttonHost = process.env.CRUNCHBUTTON_HOST || 'https://crunchbutton.com'
 var port = process.env.PORT || 3696;
 var https = require('https');
 var http = require('http');
@@ -43,14 +44,9 @@ var db = parseUrl() || {
 };
 
 var corsOptions = {
-	origin: 'https://crunchbutton.com'
+	origin: crunchbuttonHost
 };
 
-
-var options = {
-	key: fs.readFileSync('wild.sha-2.crunchbutton.com.key.private'),
-	cert: fs.readFileSync('wild.sha-2.crunchbutton.com.crt')
-};
 
 var pool = mysql.createPool(db);
 
@@ -60,6 +56,11 @@ http.createServer(app).listen(port, function() {
 
 /*
 // only for local dev
+var options = {
+	key: fs.readFileSync('wild.sha-2.crunchbutton.com.key.private'),
+	cert: fs.readFileSync('wild.sha-2.crunchbutton.com.crt')
+};
+
 https.createServer(options, app).listen(443, function() {
 	console.log('HTTP listening at port %d', 443);
 });
